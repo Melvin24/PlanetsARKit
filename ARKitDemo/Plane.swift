@@ -13,53 +13,39 @@ import ARKit
 class Plane: SCNNode {
     
     var anchor: ARPlaneAnchor
-    var planeGeometry: SCNBox
+    var planeGeometry: SCNPlane
     
     init(withAnchor anchor: ARPlaneAnchor, hidden: Bool) {
         
         self.anchor = anchor
         
         let width = CGFloat(anchor.extent.x)
-        let length = CGFloat(anchor.extent.z)
+        let height = CGFloat(anchor.extent.z)
         
-        // For the physics engine to work properly give the plane some height so we get interactions
-        // between the plane and the gometry we add to the scene
-        let planeHeight: Float = 0.01
-        
-        planeGeometry = SCNBox(width: width, height: CGFloat(planeHeight), length: length, chamferRadius: 0)
+        planeGeometry = SCNPlane(width: width, height: height)
         
         super.init()
     
-        
-        let materialTronStyle = tronMaterial()
-        
-        // Since we are using a cube, we only want to render the tron grid
-        // on the top face, make the other sides transparent
-        let transparentMaterial = SCNMaterial()
-        transparentMaterial.diffuse.contents = UIColor(white: 1, alpha: 0)
-        
-        let materials: [SCNMaterial]
-        
-        if hidden {
-            materials = Array(repeating: transparentMaterial, count: 6)
-        } else {
-            var finalMaterials = Array(repeating: transparentMaterial, count: 4)
-            finalMaterials.append(materialTronStyle)
-            finalMaterials.append(transparentMaterial)
-            
-            materials = finalMaterials
-        }
-        
-        self.planeGeometry.materials = materials
+        self.planeGeometry.materials = [tronMaterial()]
         
         let planeNode = SCNNode(geometry: planeGeometry)
         
-        planeNode.position = SCNVector3(0, 0, 0)
+        let x = CGFloat(anchor.center.x)
+        let z = CGFloat(anchor.center.z)
+        
+        planeNode.position = SCNVector3(x, 0, z)
+        
+        /*
+         `SCNPlane` is vertically oriented in its local coordinate space, so
+         rotate the plane to match the horizontal orientation of `ARPlaneAnchor`.
+         */
+        planeNode.eulerAngles.x = -.pi / 2
         
         // Give the plane a physics body so that items we add to the scene interact with it
         planeNode.physicsBody = SCNPhysicsBody(type: .kinematic, shape: SCNPhysicsShape(geometry: planeGeometry, options: nil))
         
         setTextureScale()
+        
         addChildNode(planeNode)
         
         
@@ -87,10 +73,19 @@ class Plane: SCNNode {
     }
     
     func update(anchor: ARPlaneAnchor) {
+        
+        simdPosition = float3(anchor.center.x, 0, anchor.center.z)
+
+        /*
+         Plane estimation may extend the size of the plane, or combine previously detected
+         planes into a larger one. In the latter case, `ARSCNView` automatically deletes the
+         corresponding node for one plane, then calls this method to update the size of
+         the remaining plane.
+         */
         planeGeometry.width = CGFloat(anchor.extent.x)
         planeGeometry.height = CGFloat(anchor.extent.z)
 
-        position = SCNVector3(anchor.center.x, 0, anchor.center.z);
+//        position = SCNVector3(anchor.center.x, 0, anchor.center.z);
         
         setTextureScale()
     }
