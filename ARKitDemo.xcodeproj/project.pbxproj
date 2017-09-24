@@ -15,6 +15,8 @@
 		7AAC543D1F5DAB3100FAFB22 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7AAC543B1F5DAB3100FAFB22 /* LaunchScreen.storyboard */; };
 		7AAC54481F5DAB3100FAFB22 /* ARKitDemoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AAC54471F5DAB3100FAFB22 /* ARKitDemoTests.swift */; };
 		7AAC54531F5F4C5500FAFB22 /* Plane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AAC54521F5F4C5500FAFB22 /* Plane.swift */; };
+		7AD29B0D1F768C83007F30EB /* SunNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD29B0C1F768C83007F30EB /* SunNode.swift */; };
+		7AD29B101F76ED8E007F30EB /* SunHaloNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD29B0F1F76ED8E007F30EB /* SunHaloNode.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -40,6 +42,8 @@
 		7AAC54471F5DAB3100FAFB22 /* ARKitDemoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARKitDemoTests.swift; sourceTree = "<group>"; };
 		7AAC54491F5DAB3100FAFB22 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7AAC54521F5F4C5500FAFB22 /* Plane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Plane.swift; sourceTree = "<group>"; };
+		7AD29B0C1F768C83007F30EB /* SunNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SunNode.swift; sourceTree = "<group>"; };
+		7AD29B0F1F76ED8E007F30EB /* SunHaloNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SunHaloNode.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -81,6 +85,7 @@
 		7AAC542F1F5DAB3100FAFB22 /* ARKitDemo */ = {
 			isa = PBXGroup;
 			children = (
+				7AD29B0B1F768C6E007F30EB /* Nodes */,
 				7AAC54301F5DAB3100FAFB22 /* AppDelegate.swift */,
 				7AAC54321F5DAB3100FAFB22 /* art.scnassets */,
 				7AAC54341F5DAB3100FAFB22 /* ViewController.swift */,
@@ -100,6 +105,23 @@
 				7AAC54491F5DAB3100FAFB22 /* Info.plist */,
 			);
 			path = ARKitDemoTests;
+			sourceTree = "<group>";
+		};
+		7AD29B0B1F768C6E007F30EB /* Nodes */ = {
+			isa = PBXGroup;
+			children = (
+				7AD29B0E1F768C9C007F30EB /* Sun */,
+			);
+			path = Nodes;
+			sourceTree = "<group>";
+		};
+		7AD29B0E1F768C9C007F30EB /* Sun */ = {
+			isa = PBXGroup;
+			children = (
+				7AD29B0C1F768C83007F30EB /* SunNode.swift */,
+				7AD29B0F1F76ED8E007F30EB /* SunHaloNode.swift */,
+			);
+			path = Sun;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -204,8 +226,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7AD29B101F76ED8E007F30EB /* SunHaloNode.swift in Sources */,
 				7AAC54351F5DAB3100FAFB22 /* ViewController.swift in Sources */,
 				7AAC54531F5F4C5500FAFB22 /* Plane.swift in Sources */,
+				7AD29B0D1F768C83007F30EB /* SunNode.swift in Sources */,
 				7AAC54311F5DAB3100FAFB22 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

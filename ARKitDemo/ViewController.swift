@@ -16,13 +16,17 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     @IBOutlet weak var sessionInfoView: UIView!
     @IBOutlet weak var sessionInfoLabel: UILabel!
     
-    // A dictionary of all the current planes being rendered in the scene
-    var planes: [UUID : Plane] = [:]
+    var sunNode: SunNode?
+    var sunNodeHalo: SunHaloNode?
+    
+    var selectedNode: SCNNode?
+    var hitResultWorldCoordinate: SCNVector3?
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
         setupTapGestureRecogniser(for: sceneView)
+        setupPanGestureRecogniser(for: sceneView)
         
     }
     
@@ -67,30 +71,19 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         // Show debug UI to view performance metrics (e.g. frames per second).
         sceneView.showsStatistics = true
         
+        sceneView.autoenablesDefaultLighting = true
+        
         sceneView.debugOptions = [ARSCNDebugOptions.showFeaturePoints]
     }
     
     /// Tells the delegate that a SceneKit node corresponding to a new AR anchor has been added to the scene.
     func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
-        
-        // Place content only for anchors found by plane detection.
-        guard let planeAnchor = anchor as? ARPlaneAnchor else {
-            return
-        }
-        
-        let plane = Plane(withAnchor: planeAnchor, hidden: false)
-        self.planes[planeAnchor.identifier] = plane
-        node.addChildNode(plane)
+    
         
     }
     
     /// - Tag: UpdateARContent
     func renderer(_ renderer: SCNSceneRenderer, didUpdate node: SCNNode, for anchor: ARAnchor) {
-        // Update content only for plane anchors and nodes matching the setup created in `renderer(_:didAdd:for:)`.
-        guard let plane = planes[anchor.identifier],
-              let planeAnchor = anchor as? ARPlaneAnchor else { return }
-        
-        plane.update(anchor: planeAnchor)
 
     }
     
@@ -98,68 +91,94 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         let tapGestureRec = UITapGestureRecognizer(target: self, action: #selector(tapped(recognizer:)))
         sceneView.addGestureRecognizer(tapGestureRec)
     }
-//
-//    // Contains a list of all the boxes rendered in the scene
-//    var boxes: [SCNNode] = []
+    
+    func setupPanGestureRecogniser(for sceneView: ARSCNView) {
+        let panGestureRecogniser = UIPanGestureRecognizer(target: self, action: #selector(handlePanGesture(gestureRecogniser:)))
+        sceneView.addGestureRecognizer(panGestureRecogniser)
+    }
+    
     
     @objc func tapped(recognizer: UIGestureRecognizer) {
         let tapPoint = recognizer.location(in: sceneView)
 
-        let hitResult = sceneView.hitTest(tapPoint, types: [.existingPlaneUsingExtent])
-        guard hitResult.count > 0  else {
+        let nodeHitResult = sceneView.hitTest(tapPoint, options: nil)
+        
+        if let firstHitNode = nodeHitResult.first {
+            self.selectedNode = firstHitNode.node
+            self.hitResultWorldCoordinate = firstHitNode.worldCoordinates
+        }
+        
+        let hitResult = sceneView.hitTest(tapPoint, types: [.featurePoint])
+        guard sunNode == nil, let closestHitResult = hitResult.first  else {
             return
         }
 
-        // If there are multiple hits, just pick the closest plane
-        let closestHitResult = hitResult[0]
+        sunNode = SunNode()
+        sunNodeHalo = SunHaloNode()
+        
+//        sunNode?.runAction(SCNAction.repeatForever(SCNAction.rotateBy(x: 0, y: 2, z: 0, duration: 1)))
+        
+        let sunTexturAnim = CABasicAnimation.init(keyPath: "contentsTransform")
+        
+        // Achieve a lava effect by animating textures
+        sunTexturAnim.duration = 0.2;
+        sunTexturAnim.fromValue = NSValue(caTransform3D: CATransform3DConcat(CATransform3DMakeTranslation(0, 0, 0),
+                                                                             CATransform3DMakeScale(3, 3, 3)
+                                                                            )
+                                         )
+        sunTexturAnim.toValue = NSValue(caTransform3D: CATransform3DConcat(CATransform3DMakeTranslation(1, 0, 0),
+                                                                             CATransform3DMakeScale(3, 3, 3)
+            )
+        )
 
-        let node = nodeAt(hitResult: closestHitResult)
+        sunTexturAnim.repeatCount = .greatestFiniteMagnitude
+        
+        sunNode?.geometry?.firstMaterial?.diffuse.addAnimation(sunTexturAnim, forKey: "sun-texture")
+        
+        sunNode?.addChildNode(sunNodeHalo!)
+        setPosition(hitResult: closestHitResult, withNode: sunNode!)
 
-//        guard let scene = SCNScene(named: "art.scnassets/ship.scn"),
-//              let shipNode = scene.rootNode.childNode(withName: "ship", recursively: true) else {
-//            return
-//        }
-//
-//        shipNode.scale = SCNVector3(x: 0.25, y: 0.25, z: 0.25)
-//
-//        shipNode.position = SCNVector3Make(
-//            closestHitResult.worldTransform.columns.3.x,
-//            closestHitResult.worldTransform.columns.3.y + 0.3,
-//            closestHitResult.worldTransform.columns.3.z
-//        )
-
-        sceneView.scene.rootNode.addChildNode(node)
-//        sceneView.scene.rootNode.addChildNode(sceneNode)
-
-//        boxeqs.append(node)
+        sceneView.scene.rootNode.addChildNode(sunNode!)
 
     }
     
-    func nodeAt(hitResult: ARHitTestResult) -> SCNNode {
-
-        let aBox = SCNBox(width: 0.1, height: 0.1, length: 0.1, chamferRadius: 0)
-
-        let node = SCNNode(geometry: aBox)
-
-        // The physicsBody tells SceneKit this geometry should be
-        // manipulated by the physics engine
-        node.physicsBody = SCNPhysicsBody(type: .dynamic, shape: nil)
-
-        node.physicsBody?.mass = 2.0
-
-        node.physicsBody?.categoryBitMask = Int(SCNPhysicsCollisionCategory.default.rawValue)
-
-        // We insert the geometry slightly above the point the user tapped
-        // so that it drops onto the plane using the physics engine
+    @objc func handlePanGesture(gestureRecogniser: UIPanGestureRecognizer) {
+        
+        switch gestureRecogniser.state {
+        case .changed:
+            
+            guard let selectedNode = self.sunNode else {
+                return
+            }
+//
+            let currentPosition = selectedNode.position
+            
+            print("MELVIN", gestureRecogniser.location(in: sceneView))
+//            let location = gestureRecogniser.location(in: sceneView)
+            let moveAction = SCNAction.moveBy(x: 0, y: -0.8, z: -0.2, duration: 0.5)
+            
+            selectedNode.runAction(moveAction)
+            
+//            let newPosition = SCNVector3Make(currentPosition.x + 0.1, currentPosition.y, currentPosition.z)
+//
+//            sunNode?.position = newPosition
+//            let unprojectedPoint = self.sceneView.unprojectPoint(SCNVector3Make(location.x, location.y, <#T##z: Float##Float#>))
+            
+        default:
+            return
+        }
+        
+    }
+    
+    func setPosition(hitResult: ARHitTestResult, withNode node: SCNNode) {
+        
         node.position = SCNVector3Make(
             hitResult.worldTransform.columns.3.x,
             hitResult.worldTransform.columns.3.y + 0.2,
             hitResult.worldTransform.columns.3.z
         )
-
-        return node
+        
     }
-
 
     private func updateSessionInfoLabel(for frame: ARFrame, trackingState: ARCamera.TrackingState) {
         // Update the UI to provide feedback on the state of the AR experience.
@@ -168,7 +187,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         switch trackingState {
         case .normal where frame.anchors.isEmpty:
             // No planes detected; provide instructions for this app's AR interactions.
-            message = "Move the device around to detect horizontal surfaces."
+            message = "Move the device around to detect feature points."
             
         case .normal:
             // No feedback needed when tracking is normal and planes are visible.
